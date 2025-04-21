@@ -152,7 +152,7 @@ if __name__ == "__main__":
             dic = np.load(state_file)
             states = dic["states"]
             for state in states:
-                import ipdb; ipdb.set_trace()
+                # import ipdb; ipdb.set_trace()
                 start = time.time()
                 env.sim.set_state_from_flattened(state)
                 env.sim.forward()
