@@ -17,28 +17,32 @@ from glob import glob
 from scipy import interpolate
 from scipy.interpolate import interp1d
 
-def write_to_h5(interp, timesteps, timestamps, states, actions, demNum, ep_directory, max_fr):
+
+def write_to_h5(
+    interp, timesteps, timestamps, states, actions, demNum, ep_directory, max_fr
+):
     print("Writing demo data to h5 file")
-    if (interp):
+    if interp:
         t = np.arange(0, timesteps)
         inttimestamps = interp1d(t, timestamps)
-        #intstates = interp1d(t, states)
-        #intactions = interp1d(t, actions)
+        # intstates = interp1d(t, states)
+        # intactions = interp1d(t, actions)
 
     grp = f.create_group("demo" + str(demNum))
     grp.create_dataset("timestamps", data=np.array(timestamps))
     grp.create_dataset("states", data=np.array(states))
     grp.create_dataset("actions", data=np.array(actions))
-    grp.create_dataset("xmlmodel", data=ep_directory + '/model.xml')
-    with open(ep_directory + '/model.xml', "r") as xml:
-        grp.attrs['xmlmodel'] = xml.read()
-    #grp.create_dataset("xmlmodel", data=ep_directory + env.edit_model_xml())
-    #grp.create_dataset("episode", data=ep_directory)
-    grp.attrs['episode'] = ep_directory
-    grp.attrs['max_fr'] = max_fr
-    #grp.create_dataset("env", data=env)
-def playback_trajectory(env, ep_dir, max_fr=None):
+    grp.create_dataset("xmlmodel", data=ep_directory + "/model.xml")
+    with open(ep_directory + "/model.xml", "r") as xml:
+        grp.attrs["xmlmodel"] = xml.read()
+    # grp.create_dataset("xmlmodel", data=ep_directory + env.edit_model_xml())
+    # grp.create_dataset("episode", data=ep_directory)
+    grp.attrs["episode"] = ep_directory
+    grp.attrs["max_fr"] = max_fr
+    # grp.create_dataset("env", data=env)
 
+
+def playback_trajectory(env, ep_dir, max_fr=None):
     # first reload the model from the xml
     xml_path = os.path.join(ep_dir, "model.xml")
     with open(xml_path, "r") as f:
@@ -69,17 +73,18 @@ def playback_trajectory(env, ep_dir, max_fr=None):
                     time.sleep(diff)
     env.close()
 
+
 if __name__ == "__main__":
     timesteps = 500
     interp = 0
     discardedDems = np.zeros(0)
     numDiscards = 0
-    seed = random.randint(1,10000)
+    seed = random.randint(1, 10000)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--environment", type=str, default="Door")
     parser.add_argument("--directory", type=str, default=os.getcwd())
-    #parser.add_argument("--mode", type=str, default="record")
+    # parser.add_argument("--mode", type=str, default="record")
     parser.add_argument(
         "--robots",
         nargs="+",
@@ -173,12 +178,12 @@ if __name__ == "__main__":
         control_freq=20,
         hard_reset=False,
         horizon=100,
-        #seed=seed,
+        # seed=seed,
     )
-    #env.seed = seed
-    #interp = input("Perform Smoothing? y/n")
-    #if(interp == 'y'):
-        #interp = 1
+    # env.seed = seed
+    # interp = input("Perform Smoothing? y/n")
+    # if(interp == 'y'):
+    # interp = 1
     data_directory = args.directory
     # Wrap this environment in a visualization wrapper
     env = VisualizationWrapper(env, indicator_configs=None)
@@ -198,27 +203,29 @@ if __name__ == "__main__":
         )
         env.viewer.add_keypress_callback(device.on_press)
     else:
-        raise Exception("Invalid device choice: choose either 'keyboard', 'dualsene' or 'spacemouse'.")
+        raise Exception(
+            "Invalid device choice: choose either 'keyboard', 'dualsene' or 'spacemouse'."
+        )
 
-    prefix = 'ep_'
+    prefix = "ep_"
     for filename in os.listdir(os.getcwd()):
         if filename.startswith(prefix):
             shutil.rmtree(os.getcwd() + "/" + filename)
 
-    extension = '.h5'
+    extension = ".h5"
     for filename in os.listdir():
         if filename.endswith(extension):
             os.remove(filename)
 
     demNum = 0
-    continueDems = 'y'
+    continueDems = "y"
     f = h5py.File("demos.h5", "w")
-    while continueDems == 'y':
+    while continueDems == "y":
         demNum = demNum + 1
         # Reset the environment
 
         obs = env.reset()
-        #env.seed=seed
+        # env.seed=seed
         #
         #     # Setup rendering
         cam_id = 0
@@ -267,10 +274,16 @@ if __name__ == "__main__":
             action_dict = deepcopy(input_ac_dict)  # {}
             # set arm actions
             for arm in active_robot.arms:
-                if isinstance(active_robot.composite_controller, WholeBody):  # input type passed to joint_action_policy
-                    controller_input_type = active_robot.composite_controller.joint_action_policy.input_type
+                if isinstance(
+                    active_robot.composite_controller, WholeBody
+                ):  # input type passed to joint_action_policy
+                    controller_input_type = (
+                        active_robot.composite_controller.joint_action_policy.input_type
+                    )
                 else:
-                    controller_input_type = active_robot.part_controllers[arm].input_type
+                    controller_input_type = active_robot.part_controllers[
+                        arm
+                    ].input_type
 
                 if controller_input_type == "delta":
                     action_dict[arm] = input_ac_dict[f"{arm}_delta"]
@@ -280,19 +293,26 @@ if __name__ == "__main__":
                     raise ValueError
 
             # Maintain gripper state for each robot but only update the active robot with action
-            env_action = [robot.create_action_vector(all_prev_gripper_actions[i]) for i, robot in enumerate(env.robots)]
-            env_action[device.active_robot] = active_robot.create_action_vector(action_dict)
+            env_action = [
+                robot.create_action_vector(all_prev_gripper_actions[i])
+                for i, robot in enumerate(env.robots)
+            ]
+            env_action[device.active_robot] = active_robot.create_action_vector(
+                action_dict
+            )
             env_action = np.concatenate(env_action)
             for gripper_ac in all_prev_gripper_actions[device.active_robot]:
-                all_prev_gripper_actions[device.active_robot][gripper_ac] = action_dict[gripper_ac]
+                all_prev_gripper_actions[device.active_robot][gripper_ac] = action_dict[
+                    gripper_ac
+                ]
 
             # step
             obs, reward, done, info = env.step(env_action)
-            state = env.sim.get_state().flatten() # get_state(): return MjSimState(self.data.time, qpos, qvel, act, udd_state) flatten(): return np.concatenate([[self.time], self.qpos, self.qvel], axis=0)
+            state = env.sim.get_state().flatten()  # get_state(): return MjSimState(self.data.time, qpos, qvel, act, udd_state) flatten(): return np.concatenate([[self.time], self.qpos, self.qvel], axis=0)
 
-            #tempstate = interp1d(timestamps, state)
-            #print(env.sim.model.body_names)
-            #print(env.sim.data.get_body_xpos("robot0_wrist_2_link"))
+            # tempstate = interp1d(timestamps, state)
+            # print(env.sim.model.body_names)
+            # print(env.sim.data.get_body_xpos("robot0_wrist_2_link"))
             actions.append(env_action)
             states.append(state)
             timestamps.append(time.time() - start_time)
@@ -311,8 +331,17 @@ if __name__ == "__main__":
                 obs = env.reset()
 
         keepDem = input("Keep Demonstration? y/n")
-        if(keepDem == 'y'):
-            write_to_h5(interp, timesteps, timestamps, states, actions, demNum, env.ep_directory, args.max_fr)
+        if keepDem == "y":
+            write_to_h5(
+                interp,
+                timesteps,
+                timestamps,
+                states,
+                actions,
+                demNum,
+                env.ep_directory,
+                args.max_fr,
+            )
 
         else:
             demNum = demNum - 1
@@ -323,17 +352,17 @@ if __name__ == "__main__":
 
     # playback some data
     reviewDem = input("Review Demonstrations? y/n")
-    if reviewDem == 'y':
+    if reviewDem == "y":
         for filename in os.listdir(os.getcwd()):
             if filename.startswith(prefix):
                 print("Reading " + filename)
-                data_directory = os.getcwd() + '/' + filename
+                data_directory = os.getcwd() + "/" + filename
                 playback_trajectory(env, data_directory, args.max_fr)
 
     print("reached end, closing...")
     env.close()
 
-if(numDiscards > 0):
+if numDiscards > 0:
     for i in range(numDiscards):
         temp = discardedDems[i]
         shutil.rmtree(temp)
