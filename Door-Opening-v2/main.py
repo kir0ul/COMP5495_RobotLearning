@@ -18,6 +18,7 @@ env = robosuite.make(
     has_renderer=True,
     has_offscreen_renderer=False,
     use_camera_obs=False,
+    door_open=True,
 )
 # world = MujocoWorldBase()
 # mujoco_robot = UR5e()

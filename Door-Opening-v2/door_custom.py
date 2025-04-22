@@ -5,8 +5,8 @@ import numpy as np
 from robosuite.environments.manipulation.manipulation_env import ManipulationEnv
 from robosuite.models.arenas import TableArena, MultiTableArena
 
-# from robosuite.models.objects import DoorObject
-from xml_objects import DoorObject
+from robosuite.models.objects import DoorObject
+from xml_objects import DoorOpenObject
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.observables import Observable, sensor
 from robosuite.utils.placement_samplers import UniformRandomSampler
@@ -172,6 +172,7 @@ class DoorCustom(ManipulationEnv):
         camera_segmentations=None,  # {None, instance, class, element}
         renderer="mjviewer",
         renderer_config=None,
+        door_open=False,
     ):
         # settings for table top (hardcoded since it's not an essential part of the environment)
         self.table_full_size = (0.8, 0.3, 0.05)
@@ -187,6 +188,8 @@ class DoorCustom(ManipulationEnv):
 
         # object placement initializer
         self.placement_initializer = placement_initializer
+
+        self.door_open = door_open
 
         super().__init__(
             robots=robots,
@@ -305,12 +308,20 @@ class DoorCustom(ManipulationEnv):
         )
 
         # initialize objects of interest
-        self.door = DoorObject(
-            name="Door",
-            friction=0.0,
-            damping=0.1,
-            lock=self.use_latch,
-        )
+        if self.door_open:
+            self.door = DoorOpenObject(
+                name="Door",
+                friction=0.0,
+                damping=0.1,
+                lock=self.use_latch,
+            )
+        else:
+            self.door = DoorObject(
+                name="Door",
+                friction=0.0,
+                damping=0.1,
+                lock=self.use_latch,
+            )
 
         # Create placement initializer
         if self.placement_initializer is not None:

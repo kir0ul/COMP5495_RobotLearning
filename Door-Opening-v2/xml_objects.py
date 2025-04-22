@@ -8,7 +8,7 @@ from robosuite.utils.mjcf_utils import (
 )
 
 
-class DoorObject(MujocoXMLObject):
+class DoorOpenObject(MujocoXMLObject):
     """
     Door with handle (used in Door)
 
