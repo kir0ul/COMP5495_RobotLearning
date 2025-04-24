@@ -188,7 +188,6 @@ class DoorCustom(ManipulationEnv):
         # object placement initializer
         self.placement_initializer = placement_initializer
 
-
         super().__init__(
             robots=robots,
             env_configuration=env_configuration,

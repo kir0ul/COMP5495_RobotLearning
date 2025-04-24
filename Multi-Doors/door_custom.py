@@ -9,7 +9,10 @@ from robosuite.models.objects import DoorObject
 from xml_objects import DoorOpenObject
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.observables import Observable, sensor
-from robosuite.utils.placement_samplers import SequentialCompositeSampler, UniformRandomSampler
+from robosuite.utils.placement_samplers import (
+    SequentialCompositeSampler,
+    UniformRandomSampler,
+)
 
 
 class DoorCustom(ManipulationEnv):
@@ -188,7 +191,6 @@ class DoorCustom(ManipulationEnv):
         # object placement initializer
         self.placement_initializer = placement_initializer
 
-
         super().__init__(
             robots=robots,
             env_configuration=env_configuration,
@@ -322,16 +324,16 @@ class DoorCustom(ManipulationEnv):
         #     )
         self.doorA = DoorObject(
             name="doorA",
-                friction=0.0,
-                damping=0.1,
-                lock=self.use_latch,
-            )
+            friction=0.0,
+            damping=0.1,
+            lock=self.use_latch,
+        )
         self.doorB = DoorObject(
             name="doorB",
-                friction=0.0,
-                damping=0.1,
-                lock=self.use_latch,
-            )
+            friction=0.0,
+            damping=0.1,
+            lock=self.use_latch,
+        )
         doors = [self.doorA, self.doorB]
 
         # # Create placement initializer
@@ -356,7 +358,9 @@ class DoorCustom(ManipulationEnv):
         doors_names = ("doorA", "doorB")
         # Create default (SequentialCompositeSampler) sampler if it has not already been specified
         if self.placement_initializer is None:
-            self.placement_initializer = SequentialCompositeSampler(name="ObjectSampler")
+            self.placement_initializer = SequentialCompositeSampler(
+                name="ObjectSampler"
+            )
             default_y_ranges = ([-0.01, 0.01], [-0.1, 0.01])
             # for door_name, default_y_range in zip(doors_names, ([0.11, 0.225], [-0.225, -0.11])):
             for idx, val in enumerate(doors):
@@ -381,12 +385,14 @@ class DoorCustom(ManipulationEnv):
         self.placement_initializer.reset()
 
         for idx, val in enumerate(doors):
-            door= doors[idx]
+            door = doors[idx]
             door_name = doors_names[idx]
             # Add this door to the placement initializer
             if isinstance(self.placement_initializer, SequentialCompositeSampler):
                 # assumes we have two samplers so we add doors to them
-                self.placement_initializer.add_objects_to_sampler(sampler_name=f"{door_name}Sampler", mujoco_objects=door)
+                self.placement_initializer.add_objects_to_sampler(
+                    sampler_name=f"{door_name}Sampler", mujoco_objects=door
+                )
             else:
                 # This is assumed to be a flat sampler, so we just add all doors to this sampler
                 self.placement_initializer.add_objects(door)
@@ -410,8 +416,12 @@ class DoorCustom(ManipulationEnv):
         # Additional object references from this env
         self.object_body_ids = dict()
         # self.object_body_ids["door"] = self.sim.model.body_name2id(self.door.door_body)
-        self.object_body_ids["doorA"] = self.sim.model.body_name2id(self.doorA.root_body)
-        self.object_body_ids["doorB"] = self.sim.model.body_name2id(self.doorB.root_body)
+        self.object_body_ids["doorA"] = self.sim.model.body_name2id(
+            self.doorA.root_body
+        )
+        self.object_body_ids["doorB"] = self.sim.model.body_name2id(
+            self.doorB.root_body
+        )
         # self.doorA_body_id = self.sim.model.body_name2id(self.doorA.root_body)
         # self.doorB_body_id = self.sim.model.body_name2id(self.doorB.root_body)
 
