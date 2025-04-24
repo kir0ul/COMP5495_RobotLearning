@@ -25,6 +25,8 @@ import numpy as np
 import robosuite
 from glob import glob
 
+import imageio
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--environment", type=str, default="Door")
@@ -117,8 +119,14 @@ if __name__ == "__main__":
         horizon=100,
     )
 
+
+    # create a video writer with imageio
+    video_path = "video.mp4"
+    video_writer = imageio.get_writer(video_path, fps=24)
+    frames = []
+
     # location of plan
-    planPath = '../pyperplan-main/benchmarks/door/test.pddl.soln'
+    planPath = './planner/test.pddl.soln'
     actionLocation = "door_actions/"
     plan = open(planPath)
     actNum = 0
