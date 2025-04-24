@@ -1,0 +1,6 @@
+(define (problem BLOCKS-4-0)
+(:domain DOOR)
+(:objects A - handle B - block)
+(:INIT (CLOSED A) (REST A) (HANDEMPTY) (PATHCLEAR))
+(:goal (AND (OPEN A) (REST A) (HANDEMPTY)))
+)
