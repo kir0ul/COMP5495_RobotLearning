@@ -9,7 +9,7 @@ from robosuite.models.objects import DoorObject
 from xml_objects import DoorOpenObject
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.observables import Observable, sensor
-from robosuite.utils.placement_samplers import UniformRandomSampler
+from robosuite.utils.placement_samplers import SequentialCompositeSampler, UniformRandomSampler
 
 
 class DoorCustom(ManipulationEnv):
@@ -172,7 +172,6 @@ class DoorCustom(ManipulationEnv):
         camera_segmentations=None,  # {None, instance, class, element}
         renderer="mjviewer",
         renderer_config=None,
-        door_open=False,
     ):
         # settings for table top (hardcoded since it's not an essential part of the environment)
         self.table_full_size = (0.8, 0.3, 0.05)
@@ -189,7 +188,6 @@ class DoorCustom(ManipulationEnv):
         # object placement initializer
         self.placement_initializer = placement_initializer
 
-        self.door_open = door_open
 
         super().__init__(
             robots=robots,
@@ -283,14 +281,14 @@ class DoorCustom(ManipulationEnv):
         self.robots[0].robot_model.set_base_xpos(xpos)
 
         # load model for table top workspace
-        mujoco_arena = TableArena(
-            table_full_size=self.table_full_size,
-            table_offset=self.table_offset,
-        )
-        # mujoco_arena = MultiTableArena(
-        #     table_offsets=(self.table_offset, (0.7, -0.35, 0.8)),
-        #     table_full_sizes=(self.table_full_size, self.table_full_size),
+        # mujoco_arena = TableArena(
+        #     table_full_size=self.table_full_size,
+        #     table_offset=self.table_offset,
         # )
+        mujoco_arena = MultiTableArena(
+            table_offsets=(self.table_offset, (0.7, -0.35, 0.8)),
+            table_full_sizes=(self.table_full_size, self.table_full_size),
+        )
 
         # Arena always gets set to zero origin
         mujoco_arena.set_origin([0, 0, 0])
@@ -308,43 +306,97 @@ class DoorCustom(ManipulationEnv):
         )
 
         # initialize objects of interest
-        if self.door_open:
-            self.door = DoorOpenObject(
-                name="Door",
+        # if self.door_open:
+        #     self.door = DoorOpenObject(
+        #         name="Door",
+        #         friction=0.0,
+        #         damping=0.1,
+        #         lock=self.use_latch,
+        #     )
+        # else:
+        #     self.door = DoorObject(
+        #         name="Door",
+        #         friction=0.0,
+        #         damping=0.1,
+        #         lock=self.use_latch,
+        #     )
+        self.doorA = DoorObject(
+            name="doorA",
                 friction=0.0,
                 damping=0.1,
                 lock=self.use_latch,
             )
-        else:
-            self.door = DoorObject(
-                name="Door",
+        self.doorB = DoorObject(
+            name="doorB",
                 friction=0.0,
                 damping=0.1,
                 lock=self.use_latch,
             )
+        doors = [self.doorA, self.doorB]
 
-        # Create placement initializer
-        if self.placement_initializer is not None:
-            self.placement_initializer.reset()
-            self.placement_initializer.add_objects(self.door)
-        else:
-            self.placement_initializer = UniformRandomSampler(
-                name="ObjectSampler",
-                mujoco_objects=self.door,
-                x_range=[0.07, 0.09],
-                y_range=[-0.01, 0.01],
-                rotation=(-np.pi / 2.0 - 0.25, -np.pi / 2.0),
-                rotation_axis="z",
-                ensure_object_boundary_in_range=False,
-                ensure_valid_placement=True,
-                reference_pos=self.table_offset,
-            )
+        # # Create placement initializer
+        # if self.placement_initializer is not None:
+        #     self.placement_initializer.reset()
+        #     # self.placement_initializer.add_objects(self.door)
+        #     self.placement_initializer.add_objects(doors)
+        # else:
+        #     self.placement_initializer = UniformRandomSampler(
+        #         name="ObjectSampler",
+        #         # mujoco_objects=self.door,
+        #         mujoco_objects=doors,
+        #         x_range=[0.07, 0.09],
+        #         y_range=[-0.01, 0.01],
+        #         rotation=(-np.pi / 2.0 - 0.25, -np.pi / 2.0),
+        #         rotation_axis="z",
+        #         ensure_object_boundary_in_range=False,
+        #         # ensure_valid_placement=True,
+        #         ensure_valid_placement=False,
+        #         reference_pos=self.table_offset,
+        #     )
+        doors_names = ("doorA", "doorB")
+        # Create default (SequentialCompositeSampler) sampler if it has not already been specified
+        if self.placement_initializer is None:
+            self.placement_initializer = SequentialCompositeSampler(name="ObjectSampler")
+            default_y_ranges = ([-0.01, 0.01], [-0.1, 0.01])
+            # for door_name, default_y_range in zip(doors_names, ([0.11, 0.225], [-0.225, -0.11])):
+            for idx, val in enumerate(doors):
+                door_name = doors_names[idx]
+                default_y_range = default_y_ranges[idx]
+                self.placement_initializer.append_sampler(
+                    sampler=UniformRandomSampler(
+                        name=f"{door_name}Sampler",
+                        mujoco_objects=doors[idx],
+                        x_range=[0.07, 0.09],
+                        y_range=default_y_range,
+                        rotation=(-np.pi / 2.0 - 0.25, -np.pi / 2.0),
+                        rotation_axis="z",
+                        ensure_object_boundary_in_range=False,
+                        # ensure_valid_placement=True,
+                        ensure_valid_placement=False,
+                        reference_pos=self.table_offset,
+                        # z_offset=0.02,
+                    )
+                )
+        # Reset sampler before adding any new samplers / objects
+        self.placement_initializer.reset()
+
+        for idx, val in enumerate(doors):
+            door= doors[idx]
+            door_name = doors_names[idx]
+            # Add this door to the placement initializer
+            if isinstance(self.placement_initializer, SequentialCompositeSampler):
+                # assumes we have two samplers so we add doors to them
+                self.placement_initializer.add_objects_to_sampler(sampler_name=f"{door_name}Sampler", mujoco_objects=door)
+            else:
+                # This is assumed to be a flat sampler, so we just add all doors to this sampler
+                self.placement_initializer.add_objects(door)
 
         # task includes arena, robot, and objects of interest
         self.model = ManipulationTask(
             mujoco_arena=mujoco_arena,
             mujoco_robots=[robot.robot_model for robot in self.robots],
-            mujoco_objects=self.door,
+            # mujoco_objects=self.door,
+            mujoco_objects=doors,
         )
 
     def _setup_references(self):
@@ -357,20 +409,39 @@ class DoorCustom(ManipulationEnv):
 
         # Additional object references from this env
         self.object_body_ids = dict()
-        self.object_body_ids["door"] = self.sim.model.body_name2id(self.door.door_body)
+        # self.object_body_ids["door"] = self.sim.model.body_name2id(self.door.door_body)
+        self.object_body_ids["doorA"] = self.sim.model.body_name2id(self.doorA.root_body)
+        self.object_body_ids["doorB"] = self.sim.model.body_name2id(self.doorB.root_body)
+        # self.doorA_body_id = self.sim.model.body_name2id(self.doorA.root_body)
+        # self.doorB_body_id = self.sim.model.body_name2id(self.doorB.root_body)
+
+        # self.object_body_ids["frame"] = self.sim.model.body_name2id(
+        #     self.door.frame_body
+        # )
+        # self.object_body_ids["latch"] = self.sim.model.body_name2id(
+        #     self.door.latch_body
+        # )
+        # self.door_handle_site_id = self.sim.model.site_name2id(
+        #     self.door.important_sites["handle"]
+        # )
+        # self.hinge_qpos_addr = self.sim.model.get_joint_qpos_addr(self.door.joints[0])
+        # if self.use_latch:
+        #     self.handle_qpos_addr = self.sim.model.get_joint_qpos_addr(
+        #         self.door.joints[1]
+        #     )
         self.object_body_ids["frame"] = self.sim.model.body_name2id(
-            self.door.frame_body
+            self.doorA.frame_body
         )
         self.object_body_ids["latch"] = self.sim.model.body_name2id(
-            self.door.latch_body
+            self.doorA.latch_body
         )
         self.door_handle_site_id = self.sim.model.site_name2id(
-            self.door.important_sites["handle"]
+            self.doorA.important_sites["handle"]
         )
-        self.hinge_qpos_addr = self.sim.model.get_joint_qpos_addr(self.door.joints[0])
+        self.hinge_qpos_addr = self.sim.model.get_joint_qpos_addr(self.doorA.joints[0])
         if self.use_latch:
             self.handle_qpos_addr = self.sim.model.get_joint_qpos_addr(
-                self.door.joints[1]
+                self.doorA.joints[1]
             )
 
     def _setup_observables(self):
@@ -389,7 +460,8 @@ class DoorCustom(ManipulationEnv):
             # Define sensor callbacks
             @sensor(modality=modality)
             def door_pos(obs_cache):
-                return np.array(self.sim.data.body_xpos[self.object_body_ids["door"]])
+                # return np.array(self.sim.data.body_xpos[self.object_body_ids["door"]])
+                return np.array(self.sim.data.body_xpos[self.object_body_ids["doorA"]])
 
             @sensor(modality=modality)
             def handle_pos(obs_cache):
@@ -453,8 +525,10 @@ class DoorCustom(ManipulationEnv):
             object_placements = self.placement_initializer.sample()
 
             # We know we're only setting a single object (the door), so specifically set its pose
-            door_pos, door_quat, _ = object_placements[self.door.name]
-            door_body_id = self.sim.model.body_name2id(self.door.root_body)
+            # door_pos, door_quat, _ = object_placements[self.door.name]
+            # door_body_id = self.sim.model.body_name2id(self.door.root_body)
+            door_pos, door_quat, _ = object_placements[self.doorA.name]
+            door_body_id = self.sim.model.body_name2id(self.doorA.root_body)
             self.sim.model.body_pos[door_body_id] = door_pos
             self.sim.model.body_quat[door_body_id] = door_quat
 
@@ -484,7 +558,8 @@ class DoorCustom(ManipulationEnv):
         if vis_settings["grippers"]:
             self._visualize_gripper_to_target(
                 gripper=self.robots[0].gripper,
-                target=self.door.important_sites["handle"],
+                # target=self.door.important_sites["handle"],
+                target=self.doorA.important_sites["handle"],
                 target_type="site",
             )
 
