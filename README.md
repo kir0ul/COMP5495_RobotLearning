@@ -10,7 +10,7 @@ python collect_human_demonstrations.py --environment DoorCustom --robot UR5e --d
 
 ## Entrypoints
 
-Here are the main entrypoint files of this project:
+Here are the main entrypoints files of this project which are in the `Door+cube` folder:
 
 - `main.py`: This script allows for the collection of demonstration data for a given environment. The timesteps variable controls how long the simulation runs for. The collected data is written to an `.h5` file. The script also allows during runtime for demonstrations to be discarded or reviewed and for the user to choose how many times to demonstrate.
 
