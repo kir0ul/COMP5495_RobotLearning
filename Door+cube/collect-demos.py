@@ -16,6 +16,7 @@ from robosuite.wrappers import VisualizationWrapper, DataCollectionWrapper
 from glob import glob
 from scipy import interpolate
 from scipy.interpolate import interp1d
+
 from door_custom import DoorCustom
 
 
@@ -73,16 +74,14 @@ def playback_trajectory(env, ep_dir, max_fr=None):
 
 
 if __name__ == "__main__":
-    timesteps = 400
+    timesteps = 700
     interp = 0
     discardedDems = np.zeros(0)
     numDiscards = 0
     seed = random.randint(1, 10000)
-    usePrevEndState = 0
-    initialState = []
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--environment", type=str, default="DoorCustom")
+    parser.add_argument("--environment", type=str, default="Door")
     parser.add_argument("--directory", type=str, default=os.getcwd())
     # parser.add_argument("--mode", type=str, default="record")
     parser.add_argument(
@@ -145,6 +144,12 @@ if __name__ == "__main__":
         default=False,
         help="(DualSense Only)Reverse the effect of the x and y axes of the joystick.It is used to handle the case that the left/right and front/back sides of the view are opposite to the LX and LY of the joystick(Push LX up but the robot move left in your view)",
     )
+    parser.add_argument(
+        "--renderer",
+        type=str,
+        default="mjviewer",
+        help="Use Mujoco's builtin interactive viewer (mjviewer) or OpenCV viewer (mujoco)",
+    )
     args = parser.parse_args()
 
     # Get controller config
@@ -170,6 +175,7 @@ if __name__ == "__main__":
     env = suite.make(
         **config,
         has_renderer=True,
+        renderer=args.renderer,
         has_offscreen_renderer=False,
         render_camera="agentview",
         ignore_done=True,
@@ -221,6 +227,10 @@ if __name__ == "__main__":
     continueDems = "y"
     f = h5py.File("demos.h5", "w")
     while continueDems == "y":
+        task_completion_hold_count = (
+            -1
+        )  # counter to collect 10 timesteps after reaching goal
+
         demNum = demNum + 1
         # Reset the environment
 
@@ -246,16 +256,15 @@ if __name__ == "__main__":
             for robot in env.robots
         ]
         start_time = time.time()
-        done = 0
+        done = False
 
         states = []
         actions = []
         timestamps = []
         # Loop until we get a reset from the input or the task completes
-        for x in range(timesteps - 1):
-            if x == 0 and demNum != 1:
-                env.sim.set_state_from_flattened(initialState)
-                timestamps.append(0)
+        for x in range(timesteps):
+            if x == 99:
+                pass
             if x % 100 == 0:
                 print(x)
             start = time.time()
@@ -308,20 +317,8 @@ if __name__ == "__main__":
                 ]
 
             # step
-            if demNum == 1 and x == 0:
-                timestamps.append(0)
-                if usePrevEndState:
-                    initialState = np.load("endState.npz")["states"]
-                    env.sim.set_state_from_flattened(initialState)
-                    actions.append(env_action)
-                    states.append(initialState)
-                else:
-                    initialState = env.sim.get_state().flatten()
-                    actions.append(env_action)
-                    states.append(initialState)
             obs, reward, done, info = env.step(env_action)
             state = env.sim.get_state().flatten()  # get_state(): return MjSimState(self.data.time, qpos, qvel, act, udd_state) flatten(): return np.concatenate([[self.time], self.qpos, self.qvel], axis=0)
-
             actions.append(env_action)
             states.append(state)
             timestamps.append(time.time() - start_time)
@@ -338,8 +335,25 @@ if __name__ == "__main__":
                 print("Episode complete")
                 running = False
                 obs = env.reset()
+                break
 
-        keepDem = input("Keep Demonstration? y/n")
+            # Also break if we complete the task
+            if task_completion_hold_count == 0:
+                break
+            # state machine to check for having a success for 10 consecutive timesteps
+            if env._check_success():
+                if task_completion_hold_count > 0:
+                    task_completion_hold_count -= 1  # latched state, decrement count
+                else:
+                    task_completion_hold_count = (
+                        10  # reset count on first success timestep
+                    )
+            else:
+                task_completion_hold_count = (
+                    -1
+                )  # null the counter if there's no success
+
+        keepDem = input("Keep Demonstration? y/n ")
         if keepDem == "y":
             write_to_h5(
                 interp,
@@ -357,10 +371,10 @@ if __name__ == "__main__":
             numDiscards = numDiscards + 1
             discardedDems = np.append(discardedDems, env.ep_directory)
 
-        continueDems = input("Continue Demonstrations? y/n")
+        continueDems = input("Continue Demonstrations? y/n ")
 
     # playback some data
-    reviewDem = input("Review Demonstrations? y/n")
+    reviewDem = input("Review Demonstrations? y/n ")
     if reviewDem == "y":
         for filename in os.listdir(os.getcwd()):
             if filename.startswith(prefix):

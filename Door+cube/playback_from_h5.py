@@ -29,7 +29,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--environment", type=str, default="Door")
     parser.add_argument("--directory", type=str, default="/tmp/")
-    #parser.add_argument("--mode", type=str, default="record")
+    # parser.add_argument("--mode", type=str, default="record")
     parser.add_argument(
         "--robots",
         nargs="+",
@@ -124,11 +124,11 @@ if __name__ == "__main__":
 
     for filename in demos:
         ep = filename
-        xml_path = os.path.join(f[ep].attrs['episode'], "model.xml")
+        xml_path = os.path.join(f[ep].attrs["episode"], "model.xml")
         with open(xml_path, "r") as xmlfile:
             env.reset_from_xml_string(xmlfile.read())
         # read the model xml, using the metadata stored in the attribute for this episode
-        state_paths = os.path.join(f[ep].attrs['episode'], "*.npz")
+        state_paths = os.path.join(f[ep].attrs["episode"], "*.npz")
 
         # read states back, load them one by one, and render
         t = 0
@@ -146,9 +146,9 @@ if __name__ == "__main__":
                 if t % 10 == 0:
                     print(t)
 
-                if f[ep].attrs['max_fr'] is not None:
+                if f[ep].attrs["max_fr"] is not None:
                     elapsed = time.time() - start
-                    diff = 1 / f[ep].attrs['max_fr'] - elapsed
+                    diff = 1 / f[ep].attrs["max_fr"] - elapsed
                     if diff > 0:
                         time.sleep(diff)
         env.close()

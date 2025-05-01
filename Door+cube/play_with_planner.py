@@ -31,7 +31,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--environment", type=str, default="Door")
     parser.add_argument("--directory", type=str, default="/tmp/")
-    #parser.add_argument("--mode", type=str, default="record")
+    # parser.add_argument("--mode", type=str, default="record")
     parser.add_argument(
         "--robots",
         nargs="+",
@@ -119,14 +119,13 @@ if __name__ == "__main__":
         horizon=100,
     )
 
-
     # create a video writer with imageio
     video_path = "video.mp4"
     video_writer = imageio.get_writer(video_path, fps=24)
     frames = []
 
     # location of plan
-    planPath = './planner/test.pddl.soln'
+    planPath = "./planner/test.pddl.soln"
     actionLocation = "door_actions/"
     plan = open(planPath)
     actNum = 0
@@ -141,7 +140,7 @@ if __name__ == "__main__":
             ep = filename
             if actNum == 0:
                 xml_path = os.path.join(actionLocation, actionTraj, "model.xml")
-                #xml_path = os.path.join(actionLocation, f[ep].attrs['episode'], "model.xml")
+                # xml_path = os.path.join(actionLocation, f[ep].attrs['episode'], "model.xml")
                 with open(xml_path, "r") as xmlfile:
                     env.reset_from_xml_string(xmlfile.read())
             actNum = actNum + 1
@@ -164,9 +163,9 @@ if __name__ == "__main__":
                     if t % 10 == 0:
                         print(t)
 
-                    if f[ep].attrs['max_fr'] is not None:
+                    if f[ep].attrs["max_fr"] is not None:
                         elapsed = time.time() - start
-                        diff = 1 / f[ep].attrs['max_fr'] - elapsed
+                        diff = 1 / f[ep].attrs["max_fr"] - elapsed
                         if diff > 0:
                             time.sleep(diff)
     env.close()

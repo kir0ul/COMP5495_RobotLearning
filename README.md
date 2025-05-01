@@ -4,8 +4,8 @@
 To record demonstrations, run the following command:
 
 ``` sh
-cd Door+cube
-python collect_human_demonstrations.py --environment DoorCustom --robot UR5e --device keyboard --directory data --renderer mujoco
+cd Door+cube/
+python collect-demos.py --environment DoorCustom --robot UR5e --device keyboard --directory data --renderer mujoco
 ```
 
 ## Entrypoints
