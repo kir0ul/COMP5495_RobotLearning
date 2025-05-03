@@ -75,7 +75,7 @@ def playback_trajectory(env, ep_dir, max_fr=None):
 
 if __name__ == "__main__":
     timesteps = 700
-    interp = 0
+    interp = False
     discardedDems = np.zeros(0)
     numDiscards = 0
     seed = random.randint(1, 10000)
